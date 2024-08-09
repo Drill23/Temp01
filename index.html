@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previsão de Temperaturas para Processamento de Frangos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6 text-center">Previsão de Temperaturas para Processamento de Frangos</h1>
+        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="velocidade">
+                    Velocidade de abate (aves/min)
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="velocidade" type="number" step="0.1" required>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="peso">
+                    Peso médio do frango vivo (kg)
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="peso" type="number" step="0.1" required>
+            </div>
+            <div class="flex items-center justify-between">
+                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="button" onclick="calcularTemperaturas()">
+                    Calcular Temperaturas
+                </button>
+            </div>
+        </div>
+        <div id="resultado" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 hidden">
+            <h2 class="text-2xl font-bold mb-4">Temperaturas Recomendadas</h2>
+            <ul id="temperaturas" class="list-disc pl-5 mb-4"></ul>
+            <canvas id="temperaturaChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+    <script>
+        function calcularTemperaturas() {
+            const velocidade = document.getElementById('velocidade').value;
+            const peso = document.getElementById('peso').value;
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `velocidade=${velocidade}&peso=${peso}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultado = document.getElementById('resultado');
+                resultado.classList.remove('hidden');
+
+                const temperaturas = document.getElementById('temperaturas');
+                temperaturas.innerHTML = '';
+                const labels = {
+                    'escaldagem': 'Painel do Tanque',
+                    'entrada': 'Entrada',
+                    'saida': 'Saída',
+                    'depenadeira': 'Painel da Depenadeira',
+                    'mangueira': 'Mangueira'
+                };
+                for (const [key, value] of Object.entries(data)) {
+                    const li = document.createElement('li');
+                    li.textContent = `${labels[key]}: ${value}°C`;
+                    temperaturas.appendChild(li);
+                }
+
+                criarGrafico(data, labels);
+            });
+        }
+
+        function criarGrafico(data, labels) {
+            const ctx = document.getElementById('temperaturaChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data).map(key => labels[key]),
+                    datasets: [{
+                        label: 'Temperatura (°C)',
+                        data: Object.values(data),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
